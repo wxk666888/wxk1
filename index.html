@@ -1,13 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Grok 实时翻译 Pro </title>
+    <title>Grok 实时翻译 Pro - 稳定本地版</title>
     <style>
         :root { --bg: #f5f5f7; --card: #ffffff; --primary: #10a37f; --back-bg: #e6f7ec; }
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         
-        /* 顶部 Key 管理条 */
+        /* 顶层 Key 管理条 */
         .key-env-panel { max-width: 1200px; margin: 0 auto 15px auto; background: var(--card); padding: 12px 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); display: flex; gap: 15px; align-items: center; }
         .key-env-panel input { flex: 1; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 14px; outline: none; }
         .key-env-panel input:focus { border-color: var(--primary); }
@@ -25,14 +25,13 @@
         
         /* 结果展示 */
         .result-box { display: none; margin-top: 10px; background: #f8f9fa; padding: 20px 20px 65px 20px; border-radius: 8px; position: relative; min-height: 60px; }
-        .output-text { font-size: 20px; color: #202124; cursor: pointer; display: inline-block; line-height: 1.6; word-break: break-word; white-space: pre-wrap; width: 100%; margin-bottom: 5px; }
-        .output-text:hover { background-color: rgba(16,163,127,0.08); }
+        .output-text { font-size: 18px; color: #202124; line-height: 1.6; word-break: break-word; white-space: pre-wrap; width: 100%; margin-bottom: 5px; }
         
         /* 纯净回译面板 */
         .back-trans-panel { display: none; background: var(--back-bg); border-radius: 6px; padding: 12px 16px; font-size: 16px; line-height: 1.6; color: #2e6930; border: 1px solid #c3e6cb; margin-top: 15px; width: calc(100% - 110px); box-sizing: border-box; word-break: break-all; }
         .copy-btn { position: absolute; bottom: 12px; right: 15px; background: #fff; border: 1px solid #dadce0; color: #5f6368; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
 
-        /* 首次使用强制全屏遮罩弹窗 */
+        /* 强制全屏遮罩弹窗 */
         .welcome-mask { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; }
         .welcome-box { background: white; padding: 35px; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; box-sizing: border-box; }
         .welcome-box h2 { margin-top: 0; color: #202124; font-size: 22px; }
@@ -41,14 +40,16 @@
         .welcome-box input:focus { border-color: var(--primary); }
         .welcome-box button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
         .welcome-box button:hover { background: #0e8c6d; }
+        
+        .click-tip { font-size: 12px; color: #10a37f; cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
     </style>
 </head>
 <body>
 
 <div id="welcome-overlay" class="welcome-mask">
     <div class="welcome-box">
-        <h2>👋 欢迎使用 Grok 实时翻译 Pro</h2>
-        <p>这是一个纯前端应用。所有请求直连 X AI 官方。请在下方输入您的 <strong>X AI (Grok) API Key</strong> 以激活服务：</p>
+        <h2>👋 欢迎使用实时翻译 Pro</h2>
+        <p>所有数据直接对接 X AI (Grok) 官方。请在下方输入您的 <strong>API Key</strong> 以激活翻译服务：</p>
         <input type="password" id="first-key-input" placeholder="xai-................................................">
         <button onclick="saveFirstKey()">保存配置并开始体验</button>
     </div>
@@ -56,7 +57,7 @@
 
 <div class="key-env-panel">
     <span style="font-size: 14px; color: #5f6368; font-weight: 500;">X AI API Key:</span>
-    <input type="password" id="top-key-input" placeholder="xai-.................... (已安全加密保存在本地)">
+    <input type="password" id="top-key-input" placeholder="xai-.................... (已保存在浏览器本地)">
     <button class="save-key-btn" onclick="saveTopKey()">更新 Key</button>
 </div>
 
@@ -65,17 +66,19 @@
         <div class="card-header"><span>中文 → 英文 (格式严控)</span><span class="clear-btn" onclick="clearInput('zh')">一键清空</span></div>
         <textarea id="zh-input" placeholder="输入中文内容..."></textarea>
         <div id="zh-box" class="result-box">
-            <div id="zh-out" class="output-text" onclick="showCompare('zh')"></div>
+            <div id="zh-out" class="output-text"></div>
+            <div class="click-tip" onclick="showCompare('zh')">💡 点击执行回译校验</div>
             <div id="zh-back-panel" class="back-trans-panel"></div>
             <button id="zh-copy" class="copy-btn" onclick="doCopy('zh-out', 'zh-copy')">复制内容</button>
         </div>
     </div>
 
     <div class="trans-card">
-        <div class="card-header"><span>英文 → 中文 (意图分析)</span><span class="clear-btn" onclick="clearInput('en')">一键清空</span></div>
+        <div class="card-header"><span>英文 → 中文 (内容+分析)</span><span class="clear-btn" onclick="clearInput('en')">一键清空</span></div>
         <textarea id="en-input" placeholder="Type English here..."></textarea>
         <div id="en-box" class="result-box">
-            <div id="en-out" class="output-text" onclick="showCompare('en')"></div>
+            <div id="en-out" class="output-text"></div>
+            <div class="click-tip" onclick="showCompare('en')">💡 点击执行回译校验</div>
             <div id="en-back-panel" class="back-trans-panel"></div>
             <button id="en-copy" class="copy-btn" onclick="doCopy('en-out', 'en-copy')">复制内容</button>
         </div>
@@ -83,13 +86,9 @@
 </div>
 
 <script>
-    // ==========================================
-    // ⚙️ 【核心改动】：已切换至 X AI 接口与 Grok 模型
-    // ==========================================
     const API_URL = 'https://api.x.ai/v1/chat/completions'; 
     const MODEL = 'grok-4-1-fast-non-reasoning'; 
-    const STORAGE_KEY = 'GROK_TRANSLATOR_SECURE_KEY';
-    // ==========================================
+    const STORAGE_KEY = 'LOCAL_GROK_TRANSLATOR_KEY';
 
     let timer;
 
@@ -105,20 +104,20 @@
     function saveFirstKey() {
         const keyVal = document.getElementById('first-key-input').value.trim();
         if(!keyVal) {
-            alert('请输入有效的 X AI API Key 才可以开始使用哦！');
+            alert('请输入有效的 API Key！');
             return;
         }
         localStorage.setItem(STORAGE_KEY, keyVal);
         document.getElementById('top-key-input').value = keyVal;
         document.getElementById('welcome-overlay').style.display = 'none';
-        alert('🎉 配置成功！Key 已安全保存至浏览器本地。');
+        alert('🎉 配置成功！');
     }
 
     function saveTopKey() {
         const keyVal = document.getElementById('top-key-input').value.trim();
         if(!keyVal) {
             localStorage.removeItem(STORAGE_KEY);
-            alert('本地 Key 缓存已清空，下次刷新将重新要求输入。');
+            alert('本地 Key 已清空。');
         } else {
             localStorage.setItem(STORAGE_KEY, keyVal);
             alert('Key 配置已更新！');
@@ -146,7 +145,7 @@
         timer = setTimeout(() => startTranslate(mode), 700);
     }
 
-    async function chatgptRequest(sys, user) {
+    async function grokRequest(sys, user) {
         const activeKey = getApiKey();
         if (!activeKey) {
             document.getElementById('welcome-overlay').style.display = 'flex';
@@ -182,10 +181,10 @@
 
         const sys = isZh 
             ? "你是一个翻译机器。指令：1.强制译为英文。2.禁止输出逗号、感叹号、问号。3.遵循Sentence case（仅整句句首字母大写，句中普通单词全部小写）。4.极其重要：如果中文原文中包含原本就是大写的英文单词、英文特殊专有名词（如 Airtel、MTN、Albert、Regular、employee、L1、App 等），在译文中必须百分之百保持其原本的大小写状态。只返回JSON: {\"res\":\"译文\"}"
-            : "你是一个沟通助手。任务：1.将括号内英文翻译成地道中文。2.用大白话解释这句话背后的真实意图，不要分析语法。3.给出地道英文改写建议。只返回JSON: {\"trans\":\"译文\", \"analysis\":\"【大白话意思】";
+            : "你是一个沟通助手。任务：1.将英文翻译成地道中文。2.用大白话解释这句话背后的真实意图，不要分析语法。3.给出地道英文改写建议。只返回JSON: {\"trans\":\"译文\", \"analysis\":\"【大白话意思】\"}";
 
         try {
-            const raw = await chatgptRequest(sys, "Content: [" + input + "]");
+            const raw = await grokRequest(sys, "Content: [" + input + "]");
             const data = safeParse(raw);
 
             if (isZh) {
@@ -253,7 +252,7 @@
             : "你是一个回译助手。任务：将中文回译成英文，要求地道且不要任何标点符号。只返回JSON: {\"res\":\"译文\"}";
 
         try {
-            const raw = await chatgptRequest(sys, "回译内容: [" + text + "]");
+            const raw = await grokRequest(sys, "回译内容: [" + text + "]");
             const back = safeParse(raw).res || raw;
             panel.innerHTML = "<strong>回译验证：</strong>" + back;
         } catch (e) { 
