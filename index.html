@@ -1,283 +1,298 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <title>Grok 实时翻译 Pro - 稳定本地版</title>
-    <style>
-        :root { --bg: #f5f5f7; --card: #ffffff; --primary: #10a37f; --back-bg: #e6f7ec; }
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+<!-- <!DOCTYPE html> -->
+<!-- <html lang="zh-CN"> -->
+<!-- <head> -->
+    <!-- <meta charset="UTF-8"> -->
+    <!-- <title>DeepSeek 极速流式翻译 Pro </title> -->
+    <!-- <style> -->
+        <!-- :root { --bg: #f5f5f7; --card: #ffffff; --primary: #4d6bfe; --back-bg: #eef1ff; } -->
+        <!-- body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); margin: 0; padding: 20px; } -->
         
-        /* 顶层 Key 管理条 */
-        .key-env-panel { max-width: 1200px; margin: 0 auto 15px auto; background: var(--card); padding: 12px 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); display: flex; gap: 15px; align-items: center; }
-        .key-env-panel input { flex: 1; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 14px; outline: none; }
-        .key-env-panel input:focus { border-color: var(--primary); }
-        .save-key-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
-        .save-key-btn:hover { background: #0e8c6d; }
+        <!-- /* 顶层 Key 管理条 */ -->
+        <!-- .key-env-panel { max-width: 1200px; margin: 0 auto 15px auto; background: var(--card); padding: 12px 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); display: flex; gap: 15px; align-items: center; } -->
+        <!-- .key-env-panel input { flex: 1; padding: 8px 12px; border: 1px solid #dadce0; border-radius: 6px; font-size: 14px; outline: none; } -->
+        <!-- .key-env-panel input:focus { border-color: var(--primary); } -->
+        <!-- .save-key-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: background 0.2s; } -->
+        <!-- .save-key-btn:hover { background: #3952d4; } -->
 
-        /* 主体布局 */
-        .main-container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .trans-card { flex: 1; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); position: relative; }
-        .card-header { font-weight: 500; margin-bottom: 15px; color: #5f6368; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
-        .clear-btn { color: var(--primary); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 4px; }
-        .clear-btn:hover { background: #f1f3f4; }
-        textarea { width: 100%; height: 140px; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; resize: none; margin-bottom: 10px; outline: none; }
-        textarea:focus { border-color: var(--primary); }
+        <!-- /* 主体布局 */ -->
+        <!-- .main-container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; } -->
+        <!-- .trans-card { flex: 1; background: var(--card); padding: 25px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); position: relative; } -->
+        <!-- .card-header { font-weight: 500; margin-bottom: 15px; color: #5f6368; font-size: 14px; display: flex; justify-content: space-between; align-items: center; } -->
+        <!-- .clear-btn { color: var(--primary); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 4px; } -->
+        <!-- .clear-btn:hover { background: #f1f3f4; } -->
+        <!-- textarea { width: 100%; height: 140px; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; box-sizing: border-box; resize: none; margin-bottom: 10px; outline: none; } -->
+        <!-- textarea:focus { border-color: var(--primary); } -->
         
-        /* 结果展示 */
-        .result-box { display: none; margin-top: 10px; background: #f8f9fa; padding: 20px 20px 65px 20px; border-radius: 8px; position: relative; min-height: 60px; }
-        .output-text { font-size: 18px; color: #202124; line-height: 1.6; word-break: break-word; white-space: pre-wrap; width: 100%; margin-bottom: 5px; }
+        <!-- /* 结果展示 */ -->
+        <!-- .result-box { display: none; margin-top: 10px; background: #f8f9fa; padding: 20px 20px 65px 20px; border-radius: 8px; position: relative; min-height: 60px; } -->
         
-        /* 纯净回译面板 */
-        .back-trans-panel { display: none; background: var(--back-bg); border-radius: 6px; padding: 12px 16px; font-size: 16px; line-height: 1.6; color: #2e6930; border: 1px solid #c3e6cb; margin-top: 15px; width: calc(100% - 110px); box-sizing: border-box; word-break: break-all; }
-        .copy-btn { position: absolute; bottom: 12px; right: 15px; background: #fff; border: 1px solid #dadce0; color: #5f6368; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; }
-
-        /* 强制全屏遮罩弹窗 */
-        .welcome-mask { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; }
-        .welcome-box { background: white; padding: 35px; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; box-sizing: border-box; }
-        .welcome-box h2 { margin-top: 0; color: #202124; font-size: 22px; }
-        .welcome-box p { color: #5f6368; font-size: 14px; line-height: 1.5; margin-bottom: 25px; }
-        .welcome-box input { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 15px; margin-bottom: 20px; box-sizing: border-box; outline: none; }
-        .welcome-box input:focus { border-color: var(--primary); }
-        .welcome-box button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        .welcome-box button:hover { background: #0e8c6d; }
+        <!-- /* 翻译结果文本区：添加鼠标悬停小手提示，点击可直接二次回译 */ -->
+        <!-- .output-text { font-size: 18px; color: #202124; line-height: 1.6; word-break: break-word; white-space: pre-wrap; width: 100%; margin-bottom: 5px; cursor: pointer; border-radius: 4px; transition: background 0.2s; } -->
+        <!-- .output-text:hover { background: #edf2ff; title: "点击翻译内容进行二次回译"; } -->
         
-        .click-tip { font-size: 12px; color: #10a37f; cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
-    </style>
-</head>
-<body>
+        <!-- /* 纯净回译面板 */ -->
+        <!-- .back-trans-panel { display: none; background: var(--back-bg); border-radius: 6px; padding: 12px 16px; font-size: 16px; line-height: 1.6; color: #2b3a8c; border: 1px solid #cdd4ff; margin-top: 15px; width: calc(100% - 30px); box-sizing: border-box; word-break: break-all; white-space: pre-wrap; } -->
+        <!-- .copy-btn { position: absolute; bottom: 12px; right: 15px; background: #fff; border: 1px solid #dadce0; color: #5f6368; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; } -->
 
-<div id="welcome-overlay" class="welcome-mask">
-    <div class="welcome-box">
-        <h2>👋 欢迎使用实时翻译 Pro</h2>
-        <p>所有数据直接对接 X AI (Grok) 官方。请在下方输入您的 <strong>API Key</strong> 以激活翻译服务：</p>
-        <input type="password" id="first-key-input" placeholder="xai-................................................">
-        <button onclick="saveFirstKey()">保存配置并开始体验</button>
-    </div>
-</div>
+        <!-- /* 遮罩弹窗 */ -->
+        <!-- .welcome-mask { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); z-index: 9999; justify-content: center; align-items: center; } -->
+        <!-- .welcome-box { background: white; padding: 35px; border-radius: 16px; max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); text-align: center; box-sizing: border-box; } -->
+        <!-- .welcome-box h2 { margin-top: 0; color: #202124; font-size: 22px; } -->
+        <!-- .welcome-box p { color: #5f6368; font-size: 14px; line-height: 1.5; margin-bottom: 25px; } -->
+        <!-- .welcome-box input { width: 100%; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 15px; margin-bottom: 20px; box-sizing: border-box; outline: none; } -->
+        <!-- .welcome-box input:focus { border-color: var(--primary); } -->
+        <!-- .welcome-box button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; } -->
+        <!-- .welcome-box button:hover { background: #3952d4; } -->
+    <!-- </style> -->
+<!-- </head> -->
+<!-- <body> -->
 
-<div class="key-env-panel">
-    <span style="font-size: 14px; color: #5f6368; font-weight: 500;">X AI API Key:</span>
-    <input type="password" id="top-key-input" placeholder="xai-.................... (已保存在浏览器本地)">
-    <button class="save-key-btn" onclick="saveTopKey()">更新 Key</button>
-</div>
+<!-- <div id="welcome-overlay" class="welcome-mask"> -->
+    <!-- <div class="welcome-box"> -->
+        <!-- <h2>👋 欢迎使用 DeepSeek 实时翻译 Pro</h2> -->
+        <!-- <p>请输入您的 <strong>DeepSeek API Key</strong> 激活高效大吞吐量流式翻译服务：</p> -->
+        <!-- <input type="password" id="first-key-input" placeholder="sk-................................................"> -->
+        <!-- <button onclick="saveFirstKey()">保存配置并开始体验</button> -->
+    <!-- </div> -->
+<!-- </div> -->
 
-<div class="main-container">
-    <div class="trans-card">
-        <div class="card-header"><span>中文 → 英文 (格式严控)</span><span class="clear-btn" onclick="clearInput('zh')">一键清空</span></div>
-        <textarea id="zh-input" placeholder="输入中文内容..."></textarea>
-        <div id="zh-box" class="result-box">
-            <div id="zh-out" class="output-text"></div>
-            <div class="click-tip" onclick="showCompare('zh')">💡 点击执行回译校验</div>
-            <div id="zh-back-panel" class="back-trans-panel"></div>
-            <button id="zh-copy" class="copy-btn" onclick="doCopy('zh-out', 'zh-copy')">复制内容</button>
-        </div>
-    </div>
+<!-- <div class="key-env-panel"> -->
+    <!-- <span style="font-size: 14px; color: #5f6368; font-weight: 500;">DeepSeek API Key:</span> -->
+    <!-- <input type="password" id="top-key-input" placeholder="sk-.................... (已安全保存在本地)"> -->
+    <!-- <button class="save-key-btn" onclick="saveTopKey()">更新 Key</button> -->
+<!-- </div> -->
 
-    <div class="trans-card">
-        <div class="card-header"><span>英文 → 中文 (内容+分析)</span><span class="clear-btn" onclick="clearInput('en')">一键清空</span></div>
-        <textarea id="en-input" placeholder="Type English here..."></textarea>
-        <div id="en-box" class="result-box">
-            <div id="en-out" class="output-text"></div>
-            <div class="click-tip" onclick="showCompare('en')">💡 点击执行回译校验</div>
-            <div id="en-back-panel" class="back-trans-panel"></div>
-            <button id="en-copy" class="copy-btn" onclick="doCopy('en-out', 'en-copy')">复制内容</button>
-        </div>
-    </div>
-</div>
+<!-- <div class="main-container"> -->
+    <!-- <div class="trans-card"> -->
+        <!-- <div class="card-header"><span>中文 → 英文 </span><span class="clear-btn" onclick="clearInput('zh')">一键清空</span></div> -->
+        <!-- <textarea id="zh-input" placeholder="输入中文内容... 支持换行"></textarea> -->
+        <!-- <div id="zh-box" class="result-box"> -->
+            <!-- <div id="zh-out" class="output-text" onclick="showCompare('zh')" title="点击此翻译内容进行二次回译"></div> -->
+            <!-- <div id="zh-back-panel" class="back-trans-panel"></div> -->
+            <!-- <button id="zh-copy" class="copy-btn" onclick="doCopy('zh-out', 'zh-copy')">复制内容</button> -->
+        <!-- </div> -->
+    <!-- </div> -->
 
-<script>
-    const API_URL = 'https://api.x.ai/v1/chat/completions'; 
-    const MODEL = 'grok-4-1-fast-non-reasoning'; 
-    const STORAGE_KEY = 'LOCAL_GROK_TRANSLATOR_KEY';
+    <!-- <div class="trans-card"> -->
+        <!-- <div class="card-header"><span>英文 → 中文 </span><span class="clear-btn" onclick="clearInput('en')">一键清空</span></div> -->
+        <!-- <textarea id="en-input" placeholder="Type English here... Support line breaks"></textarea> -->
+        <!-- <div id="en-box" class="result-box"> -->
+            <!-- <div id="en-out" class="output-text" onclick="showCompare('en')" title="点击此翻译内容进行二次回译"></div> -->
+            <!-- <div id="en-back-panel" class="back-trans-panel"></div> -->
+            <!-- <button id="en-copy" class="copy-btn" onclick="doCopy('en-out', 'en-copy')">复制内容</button> -->
+        <!-- </div> -->
+    <!-- </div> -->
+<!-- </div> -->
 
-    let timer;
+<!-- <script> -->
+    <!-- const API_URL = 'https://api.deepseek.com/v1/chat/completions';  -->
+    <!-- const MODEL = 'deepseek-chat';  -->
+    <!-- const STORAGE_KEY = 'LOCAL_DEEPSEEK_TRANSLATOR_KEY'; -->
 
-    window.onload = function() {
-        const savedKey = localStorage.getItem(STORAGE_KEY);
-        if (!savedKey) {
-            document.getElementById('welcome-overlay').style.display = 'flex';
-        } else {
-            document.getElementById('top-key-input').value = savedKey;
-        }
-    }
+    <!-- let timer; -->
+    <!-- let activeController = null; -->
 
-    function saveFirstKey() {
-        const keyVal = document.getElementById('first-key-input').value.trim();
-        if(!keyVal) {
-            alert('请输入有效的 API Key！');
-            return;
-        }
-        localStorage.setItem(STORAGE_KEY, keyVal);
-        document.getElementById('top-key-input').value = keyVal;
-        document.getElementById('welcome-overlay').style.display = 'none';
-        alert('🎉 配置成功！');
-    }
+    <!-- window.onload = function() { -->
+        <!-- const savedKey = localStorage.getItem(STORAGE_KEY); -->
+        <!-- if (!savedKey) { -->
+            <!-- document.getElementById('welcome-overlay').style.display = 'flex'; -->
+        <!-- } else { -->
+            <!-- document.getElementById('top-key-input').value = savedKey; -->
+        <!-- } -->
+    <!-- } -->
 
-    function saveTopKey() {
-        const keyVal = document.getElementById('top-key-input').value.trim();
-        if(!keyVal) {
-            localStorage.removeItem(STORAGE_KEY);
-            alert('本地 Key 已清空。');
-        } else {
-            localStorage.setItem(STORAGE_KEY, keyVal);
-            alert('Key 配置已更新！');
-        }
-    }
+    <!-- function saveFirstKey() { -->
+        <!-- const keyVal = document.getElementById('first-key-input').value.trim(); -->
+        <!-- if(!keyVal) { alert('请输入有效的 API Key！'); return; } -->
+        <!-- localStorage.setItem(STORAGE_KEY, keyVal); -->
+        <!-- document.getElementById('top-key-input').value = keyVal; -->
+        <!-- document.getElementById('welcome-overlay').style.display = 'none'; -->
+    <!-- } -->
 
-    function getApiKey() {
-        return localStorage.getItem(STORAGE_KEY) || '';
-    }
+    <!-- function saveTopKey() { -->
+        <!-- const keyVal = document.getElementById('top-key-input').value.trim(); -->
+        <!-- if(!keyVal) { -->
+            <!-- localStorage.removeItem(STORAGE_KEY); -->
+            <!-- alert('本地 Key 缓存已清空。'); -->
+        <!-- } else { -->
+            <!-- localStorage.setItem(STORAGE_KEY, keyVal); -->
+            <!-- alert('Key 配置已更新！'); -->
+        <!-- } -->
+    <!-- } -->
 
-    function clearInput(id) {
-        document.getElementById(id + '-input').value = '';
-        document.getElementById(id + '-box').style.display = 'none';
-        document.getElementById(id + '-out').innerText = '';
-        const panel = document.getElementById(id + '-back-panel');
-        panel.innerHTML = '';
-        panel.style.display = 'none';
-    }
+    <!-- function getApiKey() { return localStorage.getItem(STORAGE_KEY) || ''; } -->
 
-    document.getElementById('zh-input').addEventListener('input', () => debounce('zh-en'));
-    document.getElementById('en-input').addEventListener('input', () => debounce('en-zh'));
+    <!-- function clearInput(id) { -->
+        <!-- if(activeController) activeController.abort(); -->
+        <!-- document.getElementById(id + '-input').value = ''; -->
+        <!-- document.getElementById(id + '-box').style.display = 'none'; -->
+        <!-- document.getElementById(id + '-out').innerText = ''; -->
+        <!-- const panel = document.getElementById(id + '-back-panel'); -->
+        <!-- panel.innerHTML = ''; -->
+        <!-- panel.style.display = 'none'; -->
+    <!-- } -->
 
-    function debounce(mode) {
-        clearTimeout(timer);
-        timer = setTimeout(() => startTranslate(mode), 700);
-    }
+    <!-- document.getElementById('zh-input').addEventListener('input', () => debounce('zh-en')); -->
+    <!-- document.getElementById('en-input').addEventListener('input', () => debounce('en-zh')); -->
 
-    async function grokRequest(sys, user) {
-        const activeKey = getApiKey();
-        if (!activeKey) {
-            document.getElementById('welcome-overlay').style.display = 'flex';
-            throw new Error("NEED_KEY");
-        }
+    <!-- function debounce(mode) { -->
+        <!-- clearTimeout(timer); -->
+        <!-- timer = setTimeout(() => startTranslate(mode), 350); -->
+    <!-- } -->
 
-        const r = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Authorization": "Bearer " + activeKey, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: MODEL,
-                messages: [{role:"system", content:sys}, {role:"user", content:user}],
-                temperature: 0.2
-            })
-        });
-        const res = await r.json();
-        if(res.error) { throw new Error(res.error.message); }
-        return res.choices[0].message.content.trim();
-    }
+    <!-- // 核心流式传输清洗逻辑 -->
+    <!-- async function startTranslate(mode) { -->
+        <!-- if (activeController) activeController.abort(); -->
+        <!-- activeController = new AbortController(); -->
 
-    async function startTranslate(mode) {
-        const isZh = mode === 'zh-en';
-        const currentId = isZh ? 'zh' : 'en';
-        const input = document.getElementById(currentId + '-input').value.trim();
-        const out = document.getElementById(currentId + '-out');
-        const box = document.getElementById(currentId + '-box');
-        const panel = document.getElementById(currentId + '-back-panel');
+        <!-- const isZh = mode === 'zh-en'; -->
+        <!-- const currentId = isZh ? 'zh' : 'en'; -->
+        <!-- const input = document.getElementById(currentId + '-input').value; // 保留换行符原本的值 -->
+        <!-- const out = document.getElementById(currentId + '-out'); -->
+        <!-- const box = document.getElementById(currentId + '-box'); -->
+        <!-- const panel = document.getElementById(currentId + '-back-panel'); -->
 
-        if (!input) { box.style.display = 'none'; return; }
-        box.style.display = 'block';
-        out.innerText = "...";
-        panel.style.display = 'none';
+        <!-- if (!input.trim()) { box.style.display = 'none'; return; } -->
+        <!-- box.style.display = 'block'; -->
+        <!-- out.innerText = "⚡ 正在响应..."; -->
+        <!-- panel.style.display = 'none'; -->
 
-        const sys = isZh 
-            ? "你是一个翻译机器。指令：1.强制译为英文。2.禁止输出逗号、感叹号、问号。3.遵循Sentence case（仅整句句首字母大写，句中普通单词全部小写）。4.极其重要：如果中文原文中包含原本就是大写的英文单词、英文特殊专有名词（如 Airtel、MTN、Albert、Regular、employee、L1、App 等），在译文中必须百分之百保持其原本的大小写状态。只返回JSON: {\"res\":\"译文\"}"
-            : "你是一个沟通助手。任务：1.将英文翻译成地道中文。2.用大白话解释这句话背后的真实意图，不要分析语法。3.给出地道英文改写建议。只返回JSON: {\"trans\":\"译文\", \"analysis\":\"【大白话意思】\"}";
+        <!-- const activeKey = getApiKey(); -->
+        <!-- if (!activeKey) { -->
+            <!-- document.getElementById('welcome-overlay').style.display = 'flex'; -->
+            <!-- out.innerText = "请先配置 API Key"; -->
+            <!-- return; -->
+        <!-- } -->
 
-        try {
-            const raw = await grokRequest(sys, "Content: [" + input + "]");
-            const data = safeParse(raw);
+        <!-- // 重新深度重构的 System Prompt：严格保留句子内部标点、精准按原文换行，杜绝拒绝服务和多余括号 -->
+        <!-- const sys = isZh  -->
+            <!-- ? "你是一个极度精准的翻译引擎。你的任务是将用户输入的任何文字强制翻译成英文。\n【硬性要求】\n1. 直接输出且仅输出翻译后的文本结果，绝对禁止包含任何道歉、解释、免责声明、或者多余的中括号/特殊包裹符号（如不要带 [Modify]）。即使原文只有一两个词（如'内容'、'修改'），也必须直接翻译出来。\n2. 长句内部请务必根据原语义合理保留必要的逗号(,)或分号(;)以确保语义顺畅，但翻译结果的【最末尾】绝对不可以带有任何句号(.)、问号(?)或感叹号(!)。\n3. 必须完美保留原文的换行结构。如果原文有换行符，翻译出来的每一行也必须按原样对应换行。\n4. 遵循Sentence case。如果原文含有大写英文或特殊专有名词（如 Airtel, MTN, L1, Regular, employee），在译文中百分之百原样保持大写状态。" -->
+            <!-- : "你是一个专业的沟通助手。你的任务是将用户输入的英文翻译成地道中文并进行多维度拆解。\n【硬性要求】\n1. 必须完美保留原文的换行和行间结构。\n2. 严格按照以下指定格式直接输出，不要夹带任何其他废话：\n\n【翻译内容】\n（这里输出地道的中文译文，如果原文有换行请在此处原样换行）\n\n【深度分析】\n【大白话意思】\n\n"; -->
 
-            if (isZh) {
-                let final = data.res || data.trans || raw;
-                const junks = [',', '，', '!', '！', '?', '？'];
-                for (let j of junks) { final = final.split(j).join(''); }
-                
-                if (final.length > 0) {
-                    final = final.charAt(0).toUpperCase() + final.slice(1);
-                    let parts = final.split('.');
-                    for (let i = 1; i < parts.length; i++) {
-                        let p = parts[i];
-                        let charIndex = -1;
-                        for (let c = 0; c < p.length; c++) { if (p[c] !== ' ') { charIndex = c; break; } }
-                        if (charIndex !== -1) { parts[i] = p.substring(0, charIndex) + p.charAt(charIndex).toUpperCase() + p.slice(charIndex + 1); }
-                    }
-                    final = parts.join('.');
-                }
+        <!-- try { -->
+            <!-- const response = await fetch(API_URL, { -->
+                <!-- method: "POST", -->
+                <!-- headers: { "Authorization": "Bearer " + activeKey, "Content-Type": "application/json" }, -->
+                <!-- signal: activeController.signal, -->
+                <!-- body: JSON.stringify({ -->
+                    <!-- model: MODEL, -->
+                    <!-- messages: [{role:"system", content:sys}, {role:"user", content: input}], // 移除包裹标记，直接投喂纯文本 -->
+                    <!-- temperature: 0.1, // 降低随机性，彻底杜绝多余废话 -->
+                    <!-- stream: true -->
+                <!-- }) -->
+            <!-- }); -->
 
-                const rawWords = input.replace(/[\u4e00-\u9fa5]/g, ' ').split(/\s+/);
-                rawWords.forEach(word => {
-                    if (word && /[A-Z]/.test(word)) {
-                        const targetWord = word.trim();
-                        const finalWords = final.split(/\s+/);
-                        const fixedWords = finalWords.map(fWord => {
-                            const cleanFWord = fWord.replace('.', '');
-                            if (cleanFWord.toLowerCase() === targetWord.toLowerCase()) {
-                                return fWord.replace(cleanFWord, targetWord);
-                            }
-                            return fWord;
-                        });
-                        final = fixedWords.join(' ');
-                    }
-                });
+            <!-- if (!response.ok) { -->
+                <!-- const errData = await response.json(); -->
+                <!-- throw new Error(errData.error?.message || "请求失败"); -->
+            <!-- } -->
 
-                out.innerText = final;
-            } else {
-                out.innerText = "【翻译内容】\n" + (data.trans || raw) + "\n\n【深度分析】\n" + (data.analysis || "解析失败");
-            }
-        } catch (e) { 
-            if(e.message === "NEED_KEY") {
-                out.innerText = "请先输入有效的 API Key。";
-            } else {
-                out.innerText = "接口异常: " + e.message;
-            }
-        }
-    }
+            <!-- out.innerText = "";  -->
+            <!-- const reader = response.body.getReader(); -->
+            <!-- const decoder = new TextDecoder("utf-8"); -->
+            <!-- let buffer = ""; -->
 
-    async function showCompare(id) {
-        const out = document.getElementById(id + '-out');
-        const panel = document.getElementById(id + '-back-panel');
-        let text = out.innerText;
+            <!-- while (true) { -->
+                <!-- const { done, value } = await reader.read(); -->
+                <!-- if (done) break; -->
+
+                <!-- buffer += decoder.decode(value, { stream: true }); -->
+                <!-- const lines = buffer.split("\n"); -->
+                <!-- buffer = lines.pop();  -->
+
+                <!-- for (const line of lines) { -->
+                    <!-- const cleanedLine = line.trim(); -->
+                    <!-- if (!cleanedLine || cleanedLine === "data: [DONE]") continue; -->
+
+                    <!-- if (cleanedLine.startsWith("data: ")) { -->
+                        <!-- try { -->
+                            <!-- const parsed = JSON.parse(cleanedLine.substring(6)); -->
+                            <!-- const chunk = parsed.choices[0]?.delta?.content || ""; -->
+                            
+                            <!-- if (chunk) { -->
+                                <!-- out.innerText += chunk; -->
+                                <!-- // 专有名词大写强制动态锁死校验 -->
+                                <!-- if (isZh) { -->
+                                    <!-- let currentText = out.innerText; -->
+                                    <!-- const rawWords = input.replace(/[\u4e00-\u9fa5]/g, ' ').split(/\s+/); -->
+                                    <!-- rawWords.forEach(word => { -->
+                                        <!-- if (word && /[A-Z]/.test(word)) { -->
+                                            <!-- const regex = new RegExp(`\\b${word}\\b`, 'gi'); -->
+                                            <!-- currentText = currentText.replace(regex, word); -->
+                                        <!-- } -->
+                                    <!-- }); -->
+                                <!-- } -->
+                            <!-- } -->
+                        <!-- } catch (e) {} -->
+                    <!-- } -->
+                <!-- } -->
+            <!-- } -->
+
+            <!-- // 在传输完之后，动态精细化掐掉翻译结果【最末尾】被误刷出来的标点符号 -->
+            <!-- if (isZh) { -->
+                <!-- let finalStr = out.innerText.trim(); -->
+                <!-- // 剔除可能被夹带的无用外层括号 -->
+                <!-- if (finalStr.startsWith('[') && finalStr.endsWith(']')) { -->
+                    <!-- finalStr = finalStr.slice(1, -1); -->
+                <!-- } -->
+                <!-- while (finalStr.endsWith('.') || finalStr.endsWith('!') || finalStr.endsWith('?') || finalStr.endsWith('。') || finalStr.endsWith('！') || finalStr.endsWith('？')) { -->
+                    <!-- finalStr = finalStr.slice(0, -1); -->
+                <!-- } -->
+                <!-- out.innerText = finalStr; -->
+            <!-- } -->
+
+        <!-- } catch (e) { -->
+            <!-- if (e.name === 'AbortError') return; -->
+            <!-- out.innerText = "接口异常: " + e.message; -->
+        <!-- } -->
+    <!-- } -->
+
+    <!-- // 触发二次回译校验：点击内容即可一秒触发 -->
+    <!-- async function showCompare(id) { -->
+        <!-- const out = document.getElementById(id + '-out'); -->
+        <!-- const panel = document.getElementById(id + '-back-panel'); -->
+        <!-- let text = out.innerText; -->
         
-        if (id === 'en' && text.includes('【深度分析】')) {
-            text = text.split('【深度分析】')[0].replace('【翻译内容】', '').trim();
-        }
+        <!-- // 英文转中文时只抓取翻译本体内容进行回译 -->
+        <!-- if (id === 'en' && text.includes('【深度分析】')) { -->
+            <!-- text = text.split('【深度分析】')[0].replace('【翻译内容】', '').trim(); -->
+        <!-- } -->
         
-        if (!text || text === "...") return;
+        <!-- if (!text || text.startsWith("⚡") || text === "...") return; -->
 
-        panel.style.display = 'block';
-        panel.innerHTML = "⏳ 正在执行回译校验...";
+        <!-- panel.style.display = 'block'; -->
+        <!-- panel.innerHTML = "⏳ 正在极速执行二次回译..."; -->
 
-        const sys = (id === 'zh')
-            ? "你是一个回译助手。任务：将英文回译成中文，要求通顺且不要任何标点符号。只返回JSON: {\"res\":\"译文\"}"
-            : "你是一个回译助手。任务：将中文回译成英文，要求地道且不要任何标点符号。只返回JSON: {\"res\":\"译文\"}";
+        <!-- const activeKey = getApiKey(); -->
+        <!-- const sys = (id === 'zh') -->
+            <!-- ? "你是一个回译助手。任务：将用户提供的英文文本重新翻译回中文，必须完美保留换行。直接返回最终翻译结果，不要带多余字词。" -->
+            <!-- : "你是一个回译助手。任务：将用户提供的中文文本重新翻译回英文，必须完美保留换行。直接返回最终地道的翻译结果，不要任何多余标记。"; -->
 
-        try {
-            const raw = await grokRequest(sys, "回译内容: [" + text + "]");
-            const back = safeParse(raw).res || raw;
-            panel.innerHTML = "<strong>回译验证：</strong>" + back;
-        } catch (e) { 
-            panel.innerHTML = "❌ 回译失败"; 
-        }
-    }
+        <!-- try { -->
+            <!-- const r = await fetch(API_URL, { -->
+                <!-- method: "POST", -->
+                <!-- headers: { "Authorization": "Bearer " + activeKey, "Content-Type": "application/json" }, -->
+                <!-- body: JSON.stringify({ -->
+                    <!-- model: MODEL, -->
+                    <!-- messages: [{role:"system", content:sys}, {role:"user", content: text}], -->
+                    <!-- temperature: 0.1 -->
+                <!-- }) -->
+            <!-- }); -->
+            <!-- const res = await r.json(); -->
+            <!-- const back = res.choices[0].message.content.trim(); -->
+            <!-- panel.innerHTML = "<strong>🔄 二次回译内容：</strong>\n" + back; -->
+        <!-- } catch (e) {  -->
+            <!-- panel.innerHTML = "❌ 二次回译执行失败";  -->
+        <!-- } -->
+    <!-- } -->
 
-    function safeParse(raw) {
-        try {
-            const start = raw.indexOf('{');
-            const end = raw.lastIndexOf('}');
-            if (start !== -1 && end !== -1) {
-                return JSON.parse(raw.substring(start, end + 1));
-            }
-        } catch (e) {}
-        return { res: raw, trans: raw };
-    }
-
-    async function doCopy(tid, bid) {
-        const content = document.getElementById(tid).innerText;
-        const btn = document.getElementById(bid);
-        await navigator.clipboard.writeText(content);
-        btn.innerText = "已复制！";
-        setTimeout(() => { btn.innerText = "复制内容"; }, 1500);
-    }
-</script>
-</body>
-</html>
+    <!-- async function doCopy(tid, bid) { -->
+        <!-- const content = document.getElementById(tid).innerText; -->
+        <!-- const btn = document.getElementById(bid); -->
+        <!-- await navigator.clipboard.writeText(content); -->
+        <!-- btn.innerText = "已复制！"; -->
+        <!-- setTimeout(() => { btn.innerText = "复制内容"; }, 1500); -->
+    <!-- } -->
+<!-- </script> -->
+<!-- </body> -->
+<!-- </html> -->
