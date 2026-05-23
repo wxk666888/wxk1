@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -27,9 +26,9 @@
         /* 结果展示 */
         .result-box { display: none; margin-top: 10px; background: #f8f9fa; padding: 20px 20px 65px 20px; border-radius: 8px; position: relative; min-height: 60px; }
         
-        /* 翻译结果文本区：添加鼠标悬停小手提示，点击可直接二次回译 */
+        /* 翻译结果文本区：小手提示 */
         .output-text { font-size: 18px; color: #202124; line-height: 1.6; word-break: break-word; white-space: pre-wrap; width: 100%; margin-bottom: 5px; cursor: pointer; border-radius: 4px; transition: background 0.2s; }
-        .output-text:hover { background: #edf2ff; title: "点击翻译内容进行二次回译"; }
+        .output-text:hover { background: #edf2ff; }
         
         /* 纯净回译面板 */
         .back-trans-panel { display: none; background: var(--back-bg); border-radius: 6px; padding: 12px 16px; font-size: 16px; line-height: 1.6; color: #2b3a8c; border: 1px solid #cdd4ff; margin-top: 15px; width: calc(100% - 30px); box-sizing: border-box; word-break: break-all; white-space: pre-wrap; }
@@ -66,7 +65,7 @@
 <div class="main-container">
     <div class="trans-card">
         <div class="card-header"><span>中文 → 英文 </span><span class="clear-btn" onclick="clearInput('zh')">一键清空</span></div>
-        <textarea id="zh-input" placeholder="输入中文内容... 支持换行"></textarea>
+        <textarea id="zh-input" placeholder="输入中文内容... 按 Enter 键开始翻译，Shift + Enter 换行"></textarea>
         <div id="zh-box" class="result-box">
             <div id="zh-out" class="output-text" onclick="showCompare('zh')" title="点击此翻译内容进行二次回译"></div>
             <div id="zh-back-panel" class="back-trans-panel"></div>
@@ -76,7 +75,7 @@
 
     <div class="trans-card">
         <div class="card-header"><span>英文 → 中文 </span><span class="clear-btn" onclick="clearInput('en')">一键清空</span></div>
-        <textarea id="en-input" placeholder="Type English here... Support line breaks"></textarea>
+        <textarea id="en-input" placeholder="Type English here... Press Enter to translate, Shift + Enter for new line"></textarea>
         <div id="en-box" class="result-box">
             <div id="en-out" class="output-text" onclick="showCompare('en')" title="点击此翻译内容进行二次回译"></div>
             <div id="en-back-panel" class="back-trans-panel"></div>
@@ -90,7 +89,6 @@
     const MODEL = 'deepseek-chat'; 
     const STORAGE_KEY = 'LOCAL_DEEPSEEK_TRANSLATOR_KEY';
 
-    let timer;
     let activeController = null;
 
     window.onload = function() {
@@ -133,22 +131,32 @@
         panel.style.display = 'none';
     }
 
-    document.getElementById('zh-input').addEventListener('input', () => debounce('zh-en'));
-    document.getElementById('en-input').addEventListener('input', () => debounce('en-zh'));
+    // ========================================================
+    // ⌨️ 【核心改动】：移除 input 监听和 1秒防抖，改用回车按键事件监听
+    // ========================================================
+    document.getElementById('zh-input').addEventListener('keydown', function(e) {
+        // 如果只按了 Enter (没有按住 Shift)
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // 阻止默认的换行行为
+            startTranslate('zh-en');
+        }
+    });
 
-    function debounce(mode) {
-        clearTimeout(timer);
-        timer = setTimeout(() => startTranslate(mode), 1000);
-    }
+    document.getElementById('en-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); 
+            startTranslate('en-zh');
+        }
+    });
+    // ========================================================
 
-    // 核心流式传输清洗逻辑
     async function startTranslate(mode) {
         if (activeController) activeController.abort();
         activeController = new AbortController();
 
         const isZh = mode === 'zh-en';
         const currentId = isZh ? 'zh' : 'en';
-        const input = document.getElementById(currentId + '-input').value; // 保留换行符原本的值
+        const input = document.getElementById(currentId + '-input').value; 
         const out = document.getElementById(currentId + '-out');
         const box = document.getElementById(currentId + '-box');
         const panel = document.getElementById(currentId + '-back-panel');
@@ -165,10 +173,9 @@
             return;
         }
 
-        // 重新深度重构的 System Prompt：严格保留句子内部标点、精准按原文换行，杜绝拒绝服务和多余括号
         const sys = isZh 
-            ? "你是一个极度精准的翻译引擎。你的任务是将用户输入的任何文字强制翻译成英文。\n【硬性要求】\n1. 直接输出且仅输出翻译后的文本结果，绝对禁止包含任何道歉、解释、免责声明、或者多余的中括号/特殊包裹符号（如不要带 [Modify]）。即使原文只有一两个词（如'内容'、'修改'），也必须直接翻译出来。\n2. 长句内部请务必根据原语义合理保留必要的逗号(,)或分号(;)以确保语义顺畅，但翻译结果的【最末尾】绝对不可以带有任何句号(.)、问号(?)或感叹号(!)。\n3. 必须完美保留原文的换行结构。如果原文有换行符，翻译出来的每一行也必须按原样对应换行。\n4. 遵循Sentence case。如果原文含有大写英文或特殊专有名词（如 Airtel, MTN, L1, Regular, employee），在译文中百分之百原样保持大写状态。"
-            : "你是一个专业的沟通助手。你的任务是将用户输入的英文翻译成地道中文并进行多维度拆解。\n【硬性要求】\n1. 必须完美保留原文的换行和行间结构。\n2. 严格按照以下指定格式直接输出，不要夹带任何其他废话：\n\n【翻译内容】\n（这里输出地道的中文译文，如果原文有换行请在此处原样换行）\n\n【深度分析】\n【大白话意思】\n\n";
+		    ? "你是一个精准的翻译引擎。请将输入的中文强制翻译成英文。直接输出翻译结果，保持原有的换行结构。英文使用 Sentence case，末尾不要加句号。"
+            : "你是一个精准的翻译引擎。请将输入的英文强制翻译成地道中文。直接输出翻译结果，保持原有的换行结构，附带原意解析";
 
         try {
             const response = await fetch(API_URL, {
@@ -177,8 +184,8 @@
                 signal: activeController.signal,
                 body: JSON.stringify({
                     model: MODEL,
-                    messages: [{role:"system", content:sys}, {role:"user", content: input}], // 移除包裹标记，直接投喂纯文本
-                    temperature: 0.1, // 降低随机性，彻底杜绝多余废话
+                    messages: [{role:"system", content:sys}, {role:"user", content: input}], 
+                    temperature: 0.1, 
                     stream: true
                 })
             });
@@ -212,7 +219,6 @@
                             
                             if (chunk) {
                                 out.innerText += chunk;
-                                // 专有名词大写强制动态锁死校验
                                 if (isZh) {
                                     let currentText = out.innerText;
                                     const rawWords = input.replace(/[\u4e00-\u9fa5]/g, ' ').split(/\s+/);
@@ -229,10 +235,8 @@
                 }
             }
 
-            // 在传输完之后，动态精细化掐掉翻译结果【最末尾】被误刷出来的标点符号
             if (isZh) {
                 let finalStr = out.innerText.trim();
-                // 剔除可能被夹带的无用外层括号
                 if (finalStr.startsWith('[') && finalStr.endsWith(']')) {
                     finalStr = finalStr.slice(1, -1);
                 }
@@ -248,13 +252,11 @@
         }
     }
 
-    // 触发二次回译校验：点击内容即可一秒触发
     async function showCompare(id) {
         const out = document.getElementById(id + '-out');
         const panel = document.getElementById(id + '-back-panel');
         let text = out.innerText;
         
-        // 英文转中文时只抓取翻译本体内容进行回译
         if (id === 'en' && text.includes('【深度分析】')) {
             text = text.split('【深度分析】')[0].replace('【翻译内容】', '').trim();
         }
